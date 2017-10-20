@@ -8,6 +8,6 @@ import io.reactivex.Single;
 
 @Dao
 public interface WordsDao {
-    @Query("SELECT * FROM words ORDER BY RANDOM() WHERE level = :levelId LIMIT 1")
+    @Query("SELECT * FROM words WHERE level = :levelId ORDER BY RANDOM() LIMIT 1")
     Single<WordEntity> loadNextWord(long levelId);
 }
