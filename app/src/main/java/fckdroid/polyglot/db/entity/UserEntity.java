@@ -2,6 +2,7 @@ package fckdroid.polyglot.db.entity;
 
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.ForeignKey;
+import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.Index;
 
 import fckdroid.polyglot.model.User;
@@ -46,5 +47,23 @@ public class UserEntity implements User {
 
     public void setLevel(long level) {
         this.level = level;
+    }
+
+    @Ignore
+    @Override
+    public void onHintClick(int wordRate) {
+        score -= wordRate / 10;
+        if (score < 0) {
+            score = 0;
+        }
+    }
+
+    @Ignore
+    @Override
+    public void onWrongAnswer(int wordRate) {
+        score -= wordRate;
+        if (score < 0) {
+            score = 0;
+        }
     }
 }

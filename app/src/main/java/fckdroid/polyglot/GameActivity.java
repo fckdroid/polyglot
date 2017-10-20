@@ -26,6 +26,8 @@ import fckdroid.polyglot.db.AppDatabase;
 import fckdroid.polyglot.db.dao.LevelsDao;
 import fckdroid.polyglot.db.dao.UsersDao;
 import fckdroid.polyglot.db.dao.WordsDao;
+import fckdroid.polyglot.db.entity.UserEntity;
+import fckdroid.polyglot.model.Level;
 import fckdroid.polyglot.model.User;
 import fckdroid.polyglot.model.Word;
 import fckdroid.polyglot.util.AppUtil;
@@ -45,6 +47,8 @@ public class GameActivity extends AppCompatActivity {
     private Disposable actionBarAnim = Disposables.disposed();
     private UsersDao usersDao;
     private WordsDao wordsDao;
+    private User currentUser;
+    private Level currentLevel;
     private Word currentWord;
     private LevelsDao levelsDao;
     private ViewGroup viewGroup;
@@ -66,8 +70,10 @@ public class GameActivity extends AppCompatActivity {
 
     private void updateUi() {
         usersDao.loadUser()
+                .doOnSuccess(user -> currentUser = user)
                 .map(User::getLevel)
                 .flatMap(levelsDao::loadLevelById)
+                .doOnSuccess(level -> this.currentLevel = level)
                 .map(level -> getResources().getString(R.string.game_level, level.getLabel()))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -109,6 +115,11 @@ public class GameActivity extends AppCompatActivity {
             animateChangingBounds();
             tvHint.setText(currentWord.getHint());
             tvHint.setVisibility(View.VISIBLE);
+            currentUser.onHintClick(currentLevel.getRate());
+            Completable.fromAction(() -> usersDao.updateUser((UserEntity) currentUser))
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(() -> {/*ignore*/}, Throwable::printStackTrace);
         });
 
         RxTextView.textChanges(etAnswer)
