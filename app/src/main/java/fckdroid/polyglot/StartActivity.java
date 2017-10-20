@@ -12,10 +12,7 @@ public class StartActivity extends AppCompatActivity {
         setContentView(R.layout.activity_start);
 
         findViewById(R.id.start_btn_exit).setOnClickListener(v -> finish());
-        findViewById(R.id.start_btn_play).setOnClickListener(v -> {
-            Intent toGame = new Intent(this, GameActivity.class);
-            startActivity(toGame);
-        });
+        findViewById(R.id.start_btn_play).setOnClickListener(v -> startActivity(new Intent(this, GameActivity.class)));
     }
 
 

@@ -4,9 +4,16 @@ package fckdroid.polyglot;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.transition.ChangeBounds;
+import android.support.transition.Explode;
+import android.support.transition.Transition;
+import android.support.transition.TransitionListenerAdapter;
+import android.support.transition.TransitionManager;
+import android.support.transition.TransitionSet;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -32,25 +39,28 @@ import io.reactivex.disposables.Disposables;
 import io.reactivex.schedulers.Schedulers;
 
 public class GameActivity extends AppCompatActivity {
-    private final int HIDE_TOOLBAR_DELAY = 150;
+    private static final int HIDE_TOOLBAR_DELAY = 150;
+    public boolean transitionInWork;
     private ViewTreeObserver.OnGlobalLayoutListener keyboardVisibilityListener;
     private Disposable actionBarAnim = Disposables.disposed();
     private UsersDao usersDao;
     private WordsDao wordsDao;
     private Word currentWord;
     private LevelsDao levelsDao;
+    private ViewGroup viewGroup;
     private EditText etAnswer;
     private TextView tvLevel;
     private TextView tvWord;
     private TextView tvGrammar;
+    private TextView tvHint;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        initDao();
         initUi();
+        initDao();
         updateUi();
     }
 
@@ -86,13 +96,19 @@ public class GameActivity extends AppCompatActivity {
     private void initUi() {
         FloatingActionButton fabSend = findViewById(R.id.game_fab_send);
         FloatingActionButton fabHint = findViewById(R.id.game_fab_hint);
+        viewGroup = findViewById(R.id.game_viewgroup);
         tvLevel = findViewById(R.id.game_tv_level);
         etAnswer = findViewById(R.id.game_et_answer);
         tvWord = findViewById(R.id.game_tv_word);
         tvGrammar = findViewById(R.id.game_tv_grammar);
+        tvHint = findViewById(R.id.game_tv_hint);
+        tvHint = findViewById(R.id.game_tv_hint);
 
         fabHint.setOnClickListener(v -> {
             fabHint.hide();
+            animateChangingBounds();
+            tvHint.setText(currentWord.getHint());
+            tvHint.setVisibility(View.VISIBLE);
         });
 
         RxTextView.textChanges(etAnswer)
@@ -106,6 +122,7 @@ public class GameActivity extends AppCompatActivity {
                 });
 
         fabSend.setVisibility(View.INVISIBLE);
+        tvHint.setVisibility(View.GONE);
     }
 
     @Override
@@ -123,18 +140,64 @@ public class GameActivity extends AppCompatActivity {
         actionBarAnim.dispose();
     }
 
-    @SuppressWarnings("ConstantConditions")
     @NonNull
     private HideKeyboardListener onHideKeyboard() {
-        return () -> getSupportActionBar().show();
+        return () -> startDelayedAnimation(this::onContentExpand);
+    }
+
+    @NonNull
+    private ShowKeyboardListener onShowKeyboard() {
+        return () -> startDelayedAnimation(this::onContentCollapse);
+    }
+
+    @NonNull
+    private Disposable startDelayedAnimation(Runnable method) {
+        return Completable.timer(HIDE_TOOLBAR_DELAY, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(disposable -> {
+                    actionBarAnim.dispose();
+                    actionBarAnim = disposable;
+                })
+                .subscribe(method::run);
     }
 
     @SuppressWarnings("ConstantConditions")
-    @NonNull
-    private ShowKeyboardListener onShowKeyboard() {
-        return () -> Completable.timer(HIDE_TOOLBAR_DELAY, TimeUnit.MILLISECONDS)
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnSubscribe(disposable -> actionBarAnim = disposable)
-                .subscribe(() -> getSupportActionBar().hide());
+    private void onContentCollapse() {
+        if (tvLevel.getVisibility() != View.GONE) {
+            getSupportActionBar().hide();
+            animateChangingBounds();
+            tvLevel.setVisibility(View.GONE);
+        }
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private void onContentExpand() {
+        if (tvLevel.getVisibility() != View.VISIBLE) {
+            animateChangingBounds();
+            tvLevel.setVisibility(View.VISIBLE);
+        }
+        getSupportActionBar().show();
+    }
+
+    private void animateChangingBounds() {
+        if (transitionInWork) {
+            return;
+        }
+        TransitionManager.beginDelayedTransition(viewGroup, new TransitionSet()
+                .addTransition(new ChangeBounds())
+                .addTransition(new Explode())
+                .addListener(new TransitionListenerAdapter() {
+                    @Override
+                    public void onTransitionEnd(@NonNull Transition transition) {
+                        super.onTransitionEnd(transition);
+                        transitionInWork = false;
+                    }
+
+                    @Override
+                    public void onTransitionStart(@NonNull Transition transition) {
+                        super.onTransitionStart(transition);
+                        transitionInWork = true;
+                    }
+                }));
     }
 }
