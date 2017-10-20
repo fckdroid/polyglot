@@ -6,6 +6,7 @@ import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;
 import android.content.Context;
 
+import fckdroid.polyglot.db.dao.LevelsDao;
 import fckdroid.polyglot.db.dao.UsersDao;
 import fckdroid.polyglot.db.dao.WordsDao;
 import fckdroid.polyglot.db.entity.LevelEntity;
@@ -32,7 +33,7 @@ public abstract class AppDatabase extends RoomDatabase {
         return INSTANCE;
     }
 
-    public abstract UsersDao userDao();
-
-    public abstract WordsDao wordDao();
+    public abstract UsersDao usersDao();
+    public abstract WordsDao wordsDao();
+    public abstract LevelsDao levelsDao();
 }

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Polyglot</string>
+    <string name="game_level">Уровень %1$s</string>
 </resources>
