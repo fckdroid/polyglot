@@ -11,6 +11,7 @@ import fckdroid.polyglot.db.dao.WordsDao;
 import fckdroid.polyglot.db.entity.LevelEntity;
 import fckdroid.polyglot.db.entity.UserEntity;
 import fckdroid.polyglot.db.entity.WordEntity;
+import fckdroid.polyglot.util.sqlite_asset.AssetSQLiteOpenHelperFactory;
 
 @Database(entities = {LevelEntity.class, UserEntity.class, WordEntity.class}, version = 1)
 public abstract class AppDatabase extends RoomDatabase {
@@ -23,6 +24,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, DATABASE_NAME)
+                            .openHelperFactory(new AssetSQLiteOpenHelperFactory())
                             .build();
                 }
             }

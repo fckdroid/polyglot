@@ -11,7 +11,9 @@ import fckdroid.polyglot.model.User;
         foreignKeys = {
                 @ForeignKey(entity = LevelEntity.class,
                         parentColumns = "id",
-                        childColumns = "level")
+                        childColumns = "level",
+                        onUpdate = ForeignKey.CASCADE,
+                        onDelete = ForeignKey.CASCADE)
         },
         indices = @Index(value = "level"))
 public class UserEntity implements User {
