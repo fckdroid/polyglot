@@ -5,6 +5,7 @@ public interface User {
     long getId();
     int getScore();
     long getLevel();
-    void onHintClick(int wordRate);
-    void onWrongAnswer(int wordRate);
+    void onSkipWord(int wordRate);
+    boolean onWrongAnswer(int wordRate, Level prevLevel);
+    boolean onRightAnswer(int wordRate, Level nextLevel);
 }

@@ -2,7 +2,7 @@ package fckdroid.polyglot.util;
 
 
 public class AppUtil {
-    private static final String EMPTY_STRING = "";
+    public static final String EMPTY_STRING = "";
 
     private AppUtil() { }
 
@@ -14,5 +14,14 @@ public class AppUtil {
         char firstChar = charArray[0];
         charArray[0] = Character.toUpperCase(firstChar);
         return String.valueOf(charArray);
+    }
+
+    public static boolean checkAnswer(String translation, String userAnswer) {
+        for (String translationVariant : translation.split("/")) {
+            if (translationVariant.equalsIgnoreCase(userAnswer)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

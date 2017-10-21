@@ -7,4 +7,5 @@ public interface Level {
     int getRate();
     int getMinScore();
     int getMaxScore();
+    void onHintClick();
 }

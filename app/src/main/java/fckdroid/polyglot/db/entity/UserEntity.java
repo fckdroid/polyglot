@@ -5,6 +5,7 @@ import android.arch.persistence.room.ForeignKey;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.Index;
 
+import fckdroid.polyglot.model.Level;
 import fckdroid.polyglot.model.User;
 
 @Entity(tableName = "users",
@@ -51,8 +52,8 @@ public class UserEntity implements User {
 
     @Ignore
     @Override
-    public void onHintClick(int wordRate) {
-        score -= wordRate / 10;
+    public void onSkipWord(int wordRate) {
+        score -= wordRate;
         if (score < 0) {
             score = 0;
         }
@@ -60,10 +61,28 @@ public class UserEntity implements User {
 
     @Ignore
     @Override
-    public void onWrongAnswer(int wordRate) {
+    public boolean onWrongAnswer(int wordRate, Level prevLevel) {
         score -= wordRate;
         if (score < 0) {
             score = 0;
+            return false;
         }
+        if (prevLevel != null && score <= prevLevel.getMaxScore()) {
+            level = prevLevel.getId();
+            return true;
+        }
+        return false;
+    }
+
+    @Ignore
+    @Override
+    public boolean onRightAnswer(int wordRate, Level nextLevel) {
+        score += wordRate * 10;
+        if (nextLevel != null && score >= nextLevel.getMinScore() &&
+                score < nextLevel.getMaxScore()) {
+            level = nextLevel.getId();
+            return true;
+        }
+        return false;
     }
 }

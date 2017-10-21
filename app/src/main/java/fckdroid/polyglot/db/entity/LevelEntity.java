@@ -60,4 +60,9 @@ public class LevelEntity implements Level {
     public void setMaxScore(int maxScore) {
         this.maxScore = maxScore;
     }
+
+    @Override
+    public void onHintClick() {
+        rate /= 2;
+    }
 }
