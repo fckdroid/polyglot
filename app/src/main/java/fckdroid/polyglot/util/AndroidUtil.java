@@ -8,8 +8,8 @@ import android.view.ViewTreeObserver;
 import fckdroid.polyglot.util.listener.HideKeyboardListener;
 import fckdroid.polyglot.util.listener.ShowKeyboardListener;
 
-public class UiUtil {
-    private UiUtil() { }
+public class AndroidUtil {
+    private AndroidUtil() { }
 
     public static ViewTreeObserver.OnGlobalLayoutListener getKeyboardVisibilityListener(View view,
                                                                                         ShowKeyboardListener showKeyboardListener,

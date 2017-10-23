@@ -3,6 +3,7 @@ package fckdroid.polyglot.util;
 
 public class AppUtil {
     public static final String EMPTY_STRING = "";
+    private static final String WORD_DELIMITER = " / ";
 
     private AppUtil() { }
 
@@ -17,8 +18,10 @@ public class AppUtil {
     }
 
     public static boolean checkAnswer(String translation, String userAnswer) {
-        for (String translationVariant : translation.split("/")) {
-            if (translationVariant.equalsIgnoreCase(userAnswer)) {
+        String formTransl = translation.replace("ё", "е");
+        String formUserAnsw = userAnswer.replace("ё", "е");
+        for (String translationVariant : formTransl.split(WORD_DELIMITER)) {
+            if (translationVariant.equalsIgnoreCase(formUserAnsw)) {
                 return true;
             }
         }

@@ -4,6 +4,7 @@ import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.ForeignKey;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.Index;
+import android.support.annotation.Nullable;
 
 import fckdroid.polyglot.model.Level;
 import fckdroid.polyglot.model.User;
@@ -52,16 +53,22 @@ public class UserEntity implements User {
 
     @Ignore
     @Override
-    public void onSkipWord(int wordRate) {
-        score -= wordRate;
+    public boolean onSkipWord(int wordRate, @Nullable Level prevLevel) {
+        score -= wordRate / 10;
         if (score < 0) {
             score = 0;
         }
+        if (prevLevel != null && score <= prevLevel.getMaxScore()) {
+            level = prevLevel.getId();
+            return true;
+        }
+        return false;
     }
+
 
     @Ignore
     @Override
-    public boolean onWrongAnswer(int wordRate, Level prevLevel) {
+    public boolean onWrongAnswer(int wordRate, @Nullable Level prevLevel) {
         score -= wordRate;
         if (score < 0) {
             score = 0;
@@ -74,12 +81,12 @@ public class UserEntity implements User {
         return false;
     }
 
+
     @Ignore
     @Override
-    public boolean onRightAnswer(int wordRate, Level nextLevel) {
-        score += wordRate * 10;
-        if (nextLevel != null && score >= nextLevel.getMinScore() &&
-                score < nextLevel.getMaxScore()) {
+    public boolean onRightAnswer(int wordRate, @Nullable Level nextLevel) {
+        score += wordRate;
+        if (nextLevel != null && score >= nextLevel.getMinScore()) {
             level = nextLevel.getId();
             return true;
         }
