@@ -138,7 +138,7 @@ public class GameActivity extends AppCompatActivity {
 
     private void onNextWord(Word word) {
         currentWord = word;
-        tvWord.setText(AppUtil.formatWord(word.getWord()));
+        tvWord.setText(AppUtil.formatWord(word.getWord(), false));
         tvGrammar.setText(word.getGrammar().toLowerCase());
         TransitionManager.beginDelayedTransition(constraintLayout, new Fade());
         tvWord.setVisibility(View.VISIBLE);
@@ -236,7 +236,7 @@ public class GameActivity extends AppCompatActivity {
             currentLevel.onHintClick();
             fabHint.hide();
             TransitionManager.beginDelayedTransition(constraintLayout, new AutoTransition());
-            tvHint.setText(currentWord.getHint());
+            tvHint.setText(AppUtil.formatWord(currentWord.getHint(), true));
             tvHint.setVisibility(View.VISIBLE);
         });
 

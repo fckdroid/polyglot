@@ -7,13 +7,16 @@ public class AppUtil {
 
     private AppUtil() { }
 
-    public static String formatWord(String word) {
+    public static String formatWord(String word, boolean inBrackets) {
         if (word.isEmpty()) {
             return EMPTY_STRING;
         }
         char[] charArray = word.toLowerCase().toCharArray();
         char firstChar = charArray[0];
         charArray[0] = Character.toUpperCase(firstChar);
+        if (inBrackets) {
+            return "(" + String.valueOf(charArray) + ")";
+        }
         return String.valueOf(charArray);
     }
 
