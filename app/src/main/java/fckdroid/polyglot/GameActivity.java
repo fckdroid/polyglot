@@ -1,6 +1,7 @@
 
 package fckdroid.polyglot;
 
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.constraint.ConstraintLayout;
 import android.support.constraint.ConstraintSet;
@@ -9,10 +10,13 @@ import android.support.transition.AutoTransition;
 import android.support.transition.ChangeBounds;
 import android.support.transition.Fade;
 import android.support.transition.TransitionManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,6 +50,7 @@ public class GameActivity extends AppCompatActivity {
     public static final int ANSWER_ATTEMPTS_COUNT = 3;
     public static final String SPACE = " ";
     private static final int SKIP_THROTTLE = 500;
+    public static final String STATE_FAB_VISIBILITY = "STATE_FAB_VISIBILITY";
 
     private UsersDao usersDao;
     private WordsDao wordsDao;
@@ -67,16 +72,24 @@ public class GameActivity extends AppCompatActivity {
     private View tvSkip;
     private View btnMinus;
     private View btnPlus;
+    private Animation animShake;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        initViews();
+        initViews(savedInstanceState);
         initDao();
         updateUi();
         initListeners();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_FAB_VISIBILITY, fabSend.getVisibility());
     }
 
     private void updateUi() {
@@ -158,7 +171,7 @@ public class GameActivity extends AppCompatActivity {
         levelsDao = AppDatabase.getInstance(this).levelsDao();
     }
 
-    private void initViews() {
+    private void initViews(Bundle state) {
         fabSend = findViewById(game_fab_send);
         fabHint = findViewById(R.id.game_fab_hint);
         constraintLayout = findViewById(R.id.game_viewgroup);
@@ -171,10 +184,11 @@ public class GameActivity extends AppCompatActivity {
         btnPlus = findViewById(R.id.btn_plus);
         btnMinus = findViewById(R.id.btn_minus);
 
-        fabSend.setVisibility(View.INVISIBLE);
+        fabSend.setVisibility(state == null ? View.INVISIBLE : state.getInt(STATE_FAB_VISIBILITY));
         tvHint.setVisibility(View.GONE);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setTitle(EMPTY_STRING);
+        animShake = AnimationUtils.loadAnimation(this, R.anim.shake);
     }
 
     private void initListeners() {
@@ -199,34 +213,9 @@ public class GameActivity extends AppCompatActivity {
             }
         });
 
-        fabSend.setOnClickListener(view -> {
-            String userAnswer = etAnswer.getText().toString().toLowerCase();
+        fabSend.setOnClickListener(ignore -> onAnswer());
 
-            boolean correctAnswer = AppUtil.checkAnswer(currentWord.getTranslation(), userAnswer);
-            if (correctAnswer) {
-                boolean levelUp = currentUser.onRightAnswer(currentLevel.getRate(), nextLevel);
-                if (levelUp) {
-                    onNewtLevel(nextLevel);
-                }
-                onNextWord(false);
-            } else {
-                attemptsCount--;
-            }
-
-            if (!correctAnswer && attemptsCount == 1) {
-                Toast.makeText(this, "Осталась 1 попытка", Toast.LENGTH_SHORT).show();
-            } else if (attemptsCount == 0) {
-                boolean levelDown = currentUser.onWrongAnswer(currentLevel.getRate(), prevLevel);
-                if (levelDown) {
-                    onNewtLevel(prevLevel);
-                }
-                onNextWord(false);
-            }
-
-            saveUser().subscribe(this::updateScore, Throwable::printStackTrace);
-        });
-
-        fabHint.setOnClickListener(v -> {
+        fabHint.setOnClickListener(ignore -> {
             currentLevel.onHintClick();
             fabHint.hide();
             TransitionManager.beginDelayedTransition(constraintLayout, new AutoTransition());
@@ -237,14 +226,56 @@ public class GameActivity extends AppCompatActivity {
         RxView.clicks(tvSkip)
                 .throttleFirst(SKIP_THROTTLE, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(ignoreIt -> onNextWord(true));
+                .subscribe(ignore -> onNextWord(true));
 
         RxTextView.textChanges(etAnswer)
-                .skip(1)
+                .skipInitialValue()
                 .map(Object::toString)
                 .filter(input -> !input.startsWith(SPACE))
+                .doOnNext(ignore -> etAnswer.getBackground().clearColorFilter())
                 .map(TextUtils::isEmpty)
                 .subscribe(this::onSendOrSkipClick);
+    }
+
+    private void onAnswer() {
+        String userAnswer = etAnswer.getText().toString().toLowerCase();
+
+        boolean correctAnswer = AppUtil.checkAnswer(currentWord.getTranslation(), userAnswer);
+        if (correctAnswer) {
+            boolean levelUp = currentUser.onRightAnswer(currentLevel.getRate(), nextLevel);
+            if (levelUp) {
+                onNewtLevel(nextLevel);
+            }
+            onNextWord(false);
+        } else {
+            attemptsCount--;
+            etAnswer.startAnimation(animShake);
+            etAnswer.getBackground().mutate().setColorFilter(getResources().getColor(R.color.colorRed), PorterDuff.Mode.SRC_ATOP);
+        }
+
+        if (!correctAnswer && attemptsCount == 1) {
+            Toast.makeText(this, "Осталась 1 попытка", Toast.LENGTH_SHORT).show();
+        } else if (attemptsCount == 0) {
+            boolean levelDown = currentUser.onWrongAnswer(currentLevel.getRate(), prevLevel);
+            if (levelDown) {
+                onNewtLevel(prevLevel);
+            }
+            onNextWord(false);
+            showCorrectTranslation();
+        }
+
+        saveUser().subscribe(this::updateScore, Throwable::printStackTrace);
+    }
+
+    private void showCorrectTranslation() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(GameActivity.this);
+        builder.setTitle("Translation")
+                .setMessage(currentWord.toString())
+                .setCancelable(false)
+                .setNegativeButton("OK",
+                        (dialog, id) -> dialog.cancel());
+        AlertDialog alert = builder.create();
+        alert.show();
     }
 
     private void updateScore() {
@@ -261,11 +292,17 @@ public class GameActivity extends AppCompatActivity {
             fabSend.hide();
             TransitionManager.beginDelayedTransition(constraintLayout, new ChangeBounds());
             constraintSet.applyTo(constraintLayout);
-        } else if (!isEmpty && !fabSend.isShown()) {
-            constraintSet.connect(tvSkip.getId(), ConstraintSet.LEFT, R.id.guideline_vertical, ConstraintSet.LEFT, 0);
-            fabSend.show();
-            TransitionManager.beginDelayedTransition(constraintLayout, new ChangeBounds());
-            constraintSet.applyTo(constraintLayout);
+        } else if (!isEmpty) {
+            if (!fabSend.isShown()) {
+                constraintSet.connect(tvSkip.getId(), ConstraintSet.LEFT, R.id.guideline_vertical, ConstraintSet.LEFT, 0);
+                fabSend.show();
+                TransitionManager.beginDelayedTransition(constraintLayout, new ChangeBounds());
+                constraintSet.applyTo(constraintLayout);
+            } else {
+                fabSend.show();
+                constraintSet.connect(tvSkip.getId(), ConstraintSet.LEFT, R.id.guideline_vertical, ConstraintSet.LEFT, 0);
+                constraintSet.applyTo(constraintLayout);
+            }
         }
     }
 
