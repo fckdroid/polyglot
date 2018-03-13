@@ -13,7 +13,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,17 +30,11 @@ import fckdroid.polyglot.db.entity.UserEntity;
 import fckdroid.polyglot.model.Level;
 import fckdroid.polyglot.model.User;
 import fckdroid.polyglot.model.Word;
-import fckdroid.polyglot.util.AndroidUtil;
 import fckdroid.polyglot.util.AppUtil;
 import fckdroid.polyglot.util.TextValidator;
-import fckdroid.polyglot.util.listener.HideKeyboardListener;
-import fckdroid.polyglot.util.listener.ShowKeyboardListener;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.disposables.Disposables;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.schedulers.Schedulers;
 
@@ -51,9 +44,6 @@ import static fckdroid.polyglot.util.AppUtil.EMPTY_STRING;
 public class GameActivity extends AppCompatActivity {
     public static final String SPACE = " ";
     private static final int SKIP_THROTTLE = 500;
-    private ViewTreeObserver.OnGlobalLayoutListener keyboardVisibilityListener;
-    private Disposable actionBarAnim = Disposables.disposed();
-    private CompositeDisposable compositeDisposable;
     private UsersDao usersDao;
     private WordsDao wordsDao;
     private User currentUser;
@@ -80,10 +70,10 @@ public class GameActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        compositeDisposable = new CompositeDisposable();
         initViews();
         initDao();
         updateUi();
+        initListeners();
     }
 
     private void updateUi() {
@@ -196,8 +186,6 @@ public class GameActivity extends AppCompatActivity {
             }
             saveUser().subscribe(() -> animateOnNextWord(this::updateUi), Throwable::printStackTrace);
         });
-        keyboardVisibilityListener = AndroidUtil.getKeyboardVisibilityListener(
-                etAnswer, onShowKeyboard(), onHideKeyboard());
         etAnswer.addTextChangedListener(new TextValidator(etAnswer) {
             @Override
             public void validate(TextView textView, String text) {
@@ -206,7 +194,6 @@ public class GameActivity extends AppCompatActivity {
                 }
             }
         });
-        etAnswer.getViewTreeObserver().addOnGlobalLayoutListener(keyboardVisibilityListener);
 
         fabSend.setOnClickListener(view -> {
             String userAnswer = etAnswer.getText().toString().toLowerCase();
@@ -243,7 +230,6 @@ public class GameActivity extends AppCompatActivity {
         RxView.clicks(tvSkip)
                 .throttleFirst(SKIP_THROTTLE, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnSubscribe(compositeDisposable::add)
                 .subscribe(ignoreIt -> onNextWord(true));
 
         RxTextView.textChanges(etAnswer)
@@ -251,7 +237,6 @@ public class GameActivity extends AppCompatActivity {
                 .map(Object::toString)
                 .filter(input -> !input.startsWith(SPACE))
                 .map(TextUtils::isEmpty)
-                .doOnSubscribe(compositeDisposable::add)
                 .subscribe(this::onSendOrSkipClick);
     }
 
@@ -305,33 +290,6 @@ public class GameActivity extends AppCompatActivity {
         tvGrammar.setVisibility(View.INVISIBLE);
         tvHint.setVisibility(View.INVISIBLE);
         fabHint.hide();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        initListeners();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        fabSend.setOnClickListener(null);
-        fabHint.setOnClickListener(null);
-        compositeDisposable.dispose();
-        etAnswer.getViewTreeObserver().removeOnGlobalLayoutListener(keyboardVisibilityListener);
-        keyboardVisibilityListener = null;
-        actionBarAnim.dispose();
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    private HideKeyboardListener onHideKeyboard() {
-        return () -> getSupportActionBar().show();
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    private ShowKeyboardListener onShowKeyboard() {
-        return () -> getSupportActionBar().hide();
     }
 
     @Override
