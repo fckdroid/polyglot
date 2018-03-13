@@ -42,8 +42,11 @@ import static fckdroid.polyglot.R.id.game_fab_send;
 import static fckdroid.polyglot.util.AppUtil.EMPTY_STRING;
 
 public class GameActivity extends AppCompatActivity {
+
+    public static final int ANSWER_ATTEMPTS_COUNT = 3;
     public static final String SPACE = " ";
     private static final int SKIP_THROTTLE = 500;
+
     private UsersDao usersDao;
     private WordsDao wordsDao;
     private User currentUser;
@@ -60,7 +63,7 @@ public class GameActivity extends AppCompatActivity {
     private TextView tvHint;
     private FloatingActionButton fabSend;
     private FloatingActionButton fabHint;
-    private boolean answerAttempt = true;
+    private int attemptsCount;
     private View tvSkip;
     private View btnMinus;
     private View btnPlus;
@@ -127,6 +130,7 @@ public class GameActivity extends AppCompatActivity {
     }
 
     private void onNextWord(Word word) {
+        attemptsCount = ANSWER_ATTEMPTS_COUNT;
         currentWord = word;
         tvWord.setText(AppUtil.formatWord(word.getWord(), false));
         tvGrammar.setText(word.getGrammar().toLowerCase());
@@ -198,22 +202,25 @@ public class GameActivity extends AppCompatActivity {
         fabSend.setOnClickListener(view -> {
             String userAnswer = etAnswer.getText().toString().toLowerCase();
 
-            if (AppUtil.checkAnswer(currentWord.getTranslation(), userAnswer)) {
-                if (currentUser.onRightAnswer(currentLevel.getRate(), nextLevel)) {
+            boolean correctAnswer = AppUtil.checkAnswer(currentWord.getTranslation(), userAnswer);
+            if (correctAnswer) {
+                boolean levelUp = currentUser.onRightAnswer(currentLevel.getRate(), nextLevel);
+                if (levelUp) {
                     onNewtLevel(nextLevel);
                 }
                 onNextWord(false);
             } else {
-                if (answerAttempt) {
-                    Toast.makeText(this, "Осталась 1 попытка", Toast.LENGTH_SHORT).show();
-                    answerAttempt = false;
-                } else {
-                    if (currentUser.onWrongAnswer(currentLevel.getRate(), prevLevel)) {
-                        onNewtLevel(prevLevel);
-                    }
-                    onNextWord(false);
-                    answerAttempt = true;
+                attemptsCount--;
+            }
+
+            if (!correctAnswer && attemptsCount == 1) {
+                Toast.makeText(this, "Осталась 1 попытка", Toast.LENGTH_SHORT).show();
+            } else if (attemptsCount == 0) {
+                boolean levelDown = currentUser.onWrongAnswer(currentLevel.getRate(), prevLevel);
+                if (levelDown) {
+                    onNewtLevel(prevLevel);
                 }
+                onNextWord(false);
             }
 
             saveUser().subscribe(this::updateScore, Throwable::printStackTrace);
