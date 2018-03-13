@@ -37,6 +37,7 @@ import fckdroid.polyglot.model.Word;
 import fckdroid.polyglot.util.AppUtil;
 import fckdroid.polyglot.util.TextValidator;
 import io.reactivex.Completable;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.observables.ConnectableObservable;
@@ -247,6 +248,7 @@ public class GameActivity extends AppCompatActivity {
                 onNewtLevel(nextLevel);
             }
             onNextWord(false);
+            etAnswer.getBackground().mutate().setColorFilter(getResources().getColor(R.color.colorGreen), PorterDuff.Mode.SRC_ATOP);
         } else {
             attemptsCount--;
             etAnswer.startAnimation(animShake);
@@ -263,6 +265,13 @@ public class GameActivity extends AppCompatActivity {
             onNextWord(false);
             showCorrectTranslation();
         }
+
+        Observable.timer(450, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .filter(ignore -> etAnswer != null)
+                .subscribe(ignore -> etAnswer.getBackground().clearColorFilter());
+
 
         saveUser().subscribe(this::updateScore, Throwable::printStackTrace);
     }
