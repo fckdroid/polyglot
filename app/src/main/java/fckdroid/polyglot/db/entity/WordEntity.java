@@ -77,4 +77,9 @@ public class WordEntity implements Word {
     public void setLevel(long level) {
         this.level = level;
     }
+
+    @Override
+    public String toString() {
+        return word + " - " + translation;
+    }
 }
